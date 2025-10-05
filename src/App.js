@@ -137,6 +137,8 @@ function App() {
               cityData={selectedCity}
               foodOutlets={cityData?.data?.foodOutlets}
               nasaPowerData={cityData?.data?.power}
+              nasaPrecipitationData={cityData?.data?.precipitation}
+              nasaNighttimeData={cityData?.data?.nighttimeLights}
             />
           </div>
         </div>

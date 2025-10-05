@@ -243,6 +243,42 @@ export async function fetchNASALST(bbox, startDate, endDate) {
 }
 
 /**
+ * Fetch NASA GPM IMERG precipitation data for urban farming water planning
+ */
+export async function fetchNASAPrecipitation(bbox, yearRange) {
+  // Import the precipitation service
+  const nasaPrecipitation = await import('./services/nasaPrecipitation.js');
+  
+  try {
+    console.log('Fetching NASA GPM IMERG precipitation data...');
+    const data = await nasaPrecipitation.default.fetchPrecipitationPatterns(bbox, yearRange);
+    console.log('✓ NASA precipitation data retrieved');
+    return data;
+  } catch (error) {
+    console.warn('⚠ NASA precipitation fetch failed, continuing without it');
+    return null;
+  }
+}
+
+/**
+ * Fetch NASA Black Marble nighttime lights for commercial activity analysis
+ */
+export async function fetchNASANighttimeLights(bbox, yearRange) {
+  // Import the nighttime lights service
+  const nasaNighttime = await import('./services/nasaNighttime.js');
+  
+  try {
+    console.log('Fetching NASA Black Marble nighttime lights data...');
+    const data = await nasaNighttime.default.fetchNighttimeLights(bbox, yearRange);
+    console.log('✓ NASA nighttime lights data retrieved');
+    return data;
+  } catch (error) {
+    console.warn('⚠ NASA nighttime lights fetch failed, continuing without it');
+    return null;
+  }
+}
+
+/**
  * Fetch NASA POWER solar/climate data (for urban farming)
  */
 export async function fetchNASAPower(lat, lng, startDate, endDate) {
@@ -304,7 +340,9 @@ export async function fetchAllCityData(cityData, options = {}) {
     includePopulation = false, // Requires auth
     includeNDVI = false,       // Requires auth
     includeLST = false,        // Requires auth
-    includePower = true        // No auth required
+    includePower = true,       // No auth required
+    includePrecipitation = true, // New service
+    includeNighttimeLights = true // New service
   } = options;
 
   console.log(`Fetching data for ${cityData.name}...`);
@@ -353,6 +391,35 @@ export async function fetchAllCityData(cityData, options = {}) {
     }
     if (includeLST) {
       results.data.lst = await fetchNASALST(cityData.boundingBox, '2024-06-01', '2024-08-31');
+    }
+
+    // New NASA services (mock data for now)
+    if (includePrecipitation) {
+      console.log('Fetching NASA precipitation data...');
+      try {
+        results.data.precipitation = await fetchNASAPrecipitation(cityData.boundingBox, {
+          start: '2024-01-01',
+          end: '2024-12-31'
+        });
+        console.log('✓ NASA precipitation data retrieved');
+      } catch (error) {
+        console.warn('⚠ NASA precipitation fetch failed, continuing without it');
+        results.data.precipitation = null;
+      }
+    }
+
+    if (includeNighttimeLights) {
+      console.log('Fetching NASA nighttime lights data...');
+      try {
+        results.data.nighttimeLights = await fetchNASANighttimeLights(cityData.boundingBox, {
+          start: '2024-01-01',
+          end: '2024-12-31'
+        });
+        console.log('✓ NASA nighttime lights data retrieved');
+      } catch (error) {
+        console.warn('⚠ NASA nighttime lights fetch failed, continuing without it');
+        results.data.nighttimeLights = null;
+      }
     }
 
     console.log('✓ All data fetched successfully');
@@ -418,6 +485,8 @@ const dataFetchers = {
   fetchNASANDVI,
   fetchNASALST,
   fetchNASAPower,
+  fetchNASAPrecipitation,
+  fetchNASANighttimeLights,
   fetchAllCityData,
   calculateBBox,
   validateBBox
