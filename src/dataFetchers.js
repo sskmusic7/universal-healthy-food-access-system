@@ -446,6 +446,16 @@ export async function fetchAllCityData(cityData, options = {}) {
       }
     }
 
+    // Generate AI solution recommendations
+    console.log('Generating AI solution recommendations...');
+    try {
+      results.data.aiSolution = await generateAISolution(results);
+      console.log('✓ AI solution recommendations generated');
+    } catch (error) {
+      console.warn('⚠ AI solution generation failed, continuing without it');
+      results.data.aiSolution = null;
+    }
+
     console.log('✓ All data fetched successfully');
     return results;
 
@@ -501,6 +511,22 @@ export function validateBBox(bbox) {
 
 // ==================== EXPORT ====================
 
+/**
+ * Generate AI solution recommendations using Gemini
+ */
+export async function generateAISolution(cityData) {
+  const geminiAI = await import('./services/geminiAI.js');
+  try {
+    console.log('Generating AI solution recommendations...');
+    const solution = await geminiAI.default.generateFoodAccessSolution(cityData);
+    console.log('✓ AI solution recommendations generated');
+    return solution;
+  } catch (error) {
+    console.warn('⚠ AI solution generation failed, continuing without it');
+    return null;
+  }
+}
+
 const dataFetchers = {
   geocodeCity,
   fetchCityBoundary,
@@ -511,6 +537,7 @@ const dataFetchers = {
   fetchNASAPower,
   fetchNASAPrecipitation,
   fetchNASANighttimeLights,
+  generateAISolution,
   fetchAllCityData,
   calculateBBox,
   validateBBox

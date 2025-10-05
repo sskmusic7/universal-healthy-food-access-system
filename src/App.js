@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import CitySelector from './components/CitySelector';
 import Map from './components/Map';
 import MetricsPanel from './components/MetricsPanel';
+import AISolutionPanel from './components/AISolutionPanel';
 import { fetchAllCityData } from './dataFetchers';
 import './App.css';
 
@@ -145,6 +146,12 @@ function App() {
               nasaNighttimeData={cityData?.data?.nighttimeLights}
               nasaLSTData={cityData?.data?.lst}
               nasaPopulationData={cityData?.data?.population}
+            />
+            
+            {/* AI Solution Panel */}
+            <AISolutionPanel 
+              aiSolution={cityData?.data?.aiSolution}
+              cityData={cityData}
             />
           </div>
         </div>
