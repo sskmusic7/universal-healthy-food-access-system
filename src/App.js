@@ -6,6 +6,7 @@ import CitySelector from './components/CitySelector';
 import Map from './components/Map';
 import MetricsPanel from './components/MetricsPanel';
 import AISolutionPanel from './components/AISolutionPanel';
+import AlgorithmAnalysisPanel from './components/AlgorithmAnalysisPanel';
 import { fetchAllCityData } from './dataFetchers';
 import './App.css';
 
@@ -151,6 +152,12 @@ function App() {
             {/* AI Solution Panel */}
             <AISolutionPanel 
               aiSolution={cityData?.data?.aiSolution}
+              cityData={cityData}
+            />
+            
+            {/* Algorithm Analysis Panel */}
+            <AlgorithmAnalysisPanel 
+              algorithmAnalysis={cityData?.data?.algorithmAnalysis}
               cityData={cityData}
             />
           </div>

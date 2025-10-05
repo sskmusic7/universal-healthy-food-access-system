@@ -456,6 +456,17 @@ export async function fetchAllCityData(cityData, options = {}) {
       results.data.aiSolution = null;
     }
 
+    // Run comprehensive algorithm analysis
+    console.log('Running comprehensive algorithm analysis...');
+    try {
+      const algorithmIntegration = await import('./services/algorithmIntegration.js');
+      results.data.algorithmAnalysis = await algorithmIntegration.default.runComprehensiveAnalysis(results);
+      console.log('✓ Algorithm analysis completed');
+    } catch (error) {
+      console.warn('⚠ Algorithm analysis failed, continuing without it');
+      results.data.algorithmAnalysis = null;
+    }
+
     console.log('✓ All data fetched successfully');
     return results;
 
