@@ -189,23 +189,21 @@ function getOutletClassification(tags) {
 // ==================== NASA EARTHDATA ====================
 
 /**
- * Fetch NASA population density (SEDAC GPWv4)
- * Note: This requires NASA Earthdata authentication
+ * Fetch NASA population density (SEDAC GPWv4) - Enhanced Implementation
  */
 export async function fetchNASAPopulation(bbox) {
-  // Placeholder - actual implementation requires NASA Earthdata token
-  // For hackathon, you can use cached data or estimate
+  // Import the enhanced population service
+  const nasaPopulation = await import('./services/nasaPopulation.js');
   
-  console.warn('NASA Population fetch requires Earthdata authentication');
-  
-  // Return mock structure for development
-  return {
-    source: 'SEDAC_GPWv4',
-    bbox,
-    data: [], // Grid of population density values
-    resolution: '1km',
-    timestamp: new Date().toISOString()
-  };
+  try {
+    console.log('Fetching NASA SEDAC GPWv4 population density data...');
+    const data = await nasaPopulation.default.fetchPopulationGrid(bbox);
+    console.log('✓ NASA population data retrieved');
+    return data;
+  } catch (error) {
+    console.warn('⚠ NASA population fetch failed, continuing without it');
+    return null;
+  }
 }
 
 /**
@@ -226,20 +224,21 @@ export async function fetchNASANDVI(bbox, startDate, endDate) {
 }
 
 /**
- * Fetch NASA Land Surface Temperature (heat exposure)
+ * Fetch NASA Land Surface Temperature (heat exposure) - Enhanced Implementation
  */
-export async function fetchNASALST(bbox, startDate, endDate) {
-  // Placeholder - requires NASA Earthdata token
+export async function fetchNASALST(bbox, summerMonths) {
+  // Import the enhanced LST service
+  const nasaLST = await import('./services/nasaLST.js');
   
-  console.warn('NASA LST fetch requires Earthdata authentication');
-  
-  return {
-    source: 'MODIS_MOD11A2',
-    bbox,
-    dateRange: { start: startDate, end: endDate },
-    data: [], // Grid of temperature values (Kelvin)
-    resolution: '1km'
-  };
+  try {
+    console.log('Fetching NASA MODIS LST data for heat analysis...');
+    const data = await nasaLST.default.fetchLSTForCity(bbox, summerMonths);
+    console.log('✓ NASA LST data retrieved');
+    return data;
+  } catch (error) {
+    console.warn('⚠ NASA LST fetch failed, continuing without it');
+    return null;
+  }
 }
 
 /**
@@ -382,15 +381,40 @@ export async function fetchAllCityData(cityData, options = {}) {
       }
     }
 
-    // Optional NASA data (requires authentication)
+    // Enhanced NASA data services
     if (includePopulation) {
-      results.data.population = await fetchNASAPopulation(cityData.boundingBox);
+      console.log('Fetching NASA population density data...');
+      try {
+        results.data.population = await fetchNASAPopulation(cityData.boundingBox);
+        console.log('✓ NASA population data retrieved');
+      } catch (error) {
+        console.warn('⚠ NASA population fetch failed, continuing without it');
+        results.data.population = null;
+      }
     }
+    
     if (includeNDVI) {
-      results.data.ndvi = await fetchNASANDVI(cityData.boundingBox, '2024-01-01', '2024-12-31');
+      console.log('Fetching NASA NDVI data...');
+      try {
+        results.data.ndvi = await fetchNASANDVI(cityData.boundingBox, '2024-01-01', '2024-12-31');
+        console.log('✓ NASA NDVI data retrieved');
+      } catch (error) {
+        console.warn('⚠ NASA NDVI fetch failed, continuing without it');
+        results.data.ndvi = null;
+      }
     }
+    
     if (includeLST) {
-      results.data.lst = await fetchNASALST(cityData.boundingBox, '2024-06-01', '2024-08-31');
+      console.log('Fetching NASA LST data...');
+      try {
+        results.data.lst = await fetchNASALST(cityData.boundingBox, [
+          '2024-06-01', '2024-07-01', '2024-08-01'
+        ]);
+        console.log('✓ NASA LST data retrieved');
+      } catch (error) {
+        console.warn('⚠ NASA LST fetch failed, continuing without it');
+        results.data.lst = null;
+      }
     }
 
     // New NASA services (mock data for now)

@@ -27,7 +27,11 @@ function App() {
       const data = await fetchAllCityData(cityInfo, {
         includeFoodOutlets: true,
         includePower: true,
-        includeNASAData: false // Set to true when you have NASA auth
+        includePopulation: true,    // NASA SEDAC Population Density
+        includeNDVI: true,          // NASA MODIS NDVI
+        includeLST: true,           // NASA MODIS LST
+        includePrecipitation: true, // NASA GPM IMERG
+        includeNighttimeLights: true // NASA Black Marble
       });
 
       setCityData(data);
@@ -139,6 +143,8 @@ function App() {
               nasaPowerData={cityData?.data?.power}
               nasaPrecipitationData={cityData?.data?.precipitation}
               nasaNighttimeData={cityData?.data?.nighttimeLights}
+              nasaLSTData={cityData?.data?.lst}
+              nasaPopulationData={cityData?.data?.population}
             />
           </div>
         </div>
