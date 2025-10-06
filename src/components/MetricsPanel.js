@@ -212,7 +212,7 @@ function MetricsPanel({ cityData, foodOutlets, nasaPowerData, nasaPrecipitationD
             lineHeight: '1.6'
           }}>
             <div style={{ marginBottom: '4px' }}>
-              <strong>Solar Irradiance:</strong> {nasaPowerData.data.ALLSKY_SFC_SW_DWN?.mean?.toFixed(2)} kW-hr/m²/day
+              <strong>Solar Irradiance:</strong> {nasaPowerData.data.ALLSKY_SFC_SW_DWN?.mean?.toFixed(2)} MJ/m²/day
             </div>
             <div style={{ marginBottom: '4px' }}>
               <strong>Avg Temperature:</strong> {nasaPowerData.data.T2M?.mean?.toFixed(1)}°C

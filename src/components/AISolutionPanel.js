@@ -290,3 +290,5 @@ function AISolutionPanel({ aiSolution, cityData }) {
 }
 
 export default AISolutionPanel;
+
+

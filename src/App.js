@@ -7,6 +7,7 @@ import Map from './components/Map';
 import MetricsPanel from './components/MetricsPanel';
 import AISolutionPanel from './components/AISolutionPanel';
 import AlgorithmAnalysisPanel from './components/AlgorithmAnalysisPanel';
+import OverlapAnalysisPanel from './components/OverlapAnalysisPanel';
 import { fetchAllCityData } from './dataFetchers';
 import './App.css';
 
@@ -155,11 +156,17 @@ function App() {
               cityData={cityData}
             />
             
-            {/* Algorithm Analysis Panel */}
-            <AlgorithmAnalysisPanel 
-              algorithmAnalysis={cityData?.data?.algorithmAnalysis}
-              cityData={cityData}
-            />
+      {/* Algorithm Analysis Panel */}
+      <AlgorithmAnalysisPanel
+        algorithmAnalysis={cityData?.data?.algorithmAnalysis}
+        cityData={cityData}
+      />
+
+      {/* Overlap Analysis Panel */}
+      <OverlapAnalysisPanel
+        overlapAnalysis={cityData?.data?.algorithmAnalysis?.overlapAnalysis}
+        cityData={cityData}
+      />
           </div>
         </div>
 

@@ -424,3 +424,5 @@ class FoodDesertAlgorithm {
 }
 
 export default new FoodDesertAlgorithm();
+
+

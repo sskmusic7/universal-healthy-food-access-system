@@ -3,6 +3,7 @@
 
 import foodDesertAlgorithm from './foodDesertAlgorithm.js';
 import interventionSiteAlgorithm from './interventionSiteAlgorithm.js';
+import overlapDetectionAlgorithm from './overlapDetectionAlgorithm.js';
 
 class AlgorithmIntegrationService {
   constructor() {
@@ -19,14 +20,25 @@ class AlgorithmIntegrationService {
     try {
       console.log('Running comprehensive food access analysis...');
       
+      const analysis = {
+        foodDeserts: await this.identifyFoodDeserts(cityData),
+        interventionSites: await this.identifyInterventionSites(cityData),
+        recommendations: await this.generateStrategicRecommendations(cityData)
+      };
+
+      // Detect overlaps and conflicts
+      console.log('Detecting topological overlaps and conflicts...');
+      const overlapAnalysis = overlapDetectionAlgorithm.detectOverlaps({
+        analysis,
+        city: cityData.city,
+        data: cityData.data
+      });
+
       const results = {
         city: cityData.city,
         timestamp: new Date().toISOString(),
-        analysis: {
-          foodDeserts: await this.identifyFoodDeserts(cityData),
-          interventionSites: await this.identifyInterventionSites(cityData),
-          recommendations: await this.generateStrategicRecommendations(cityData)
-        },
+        analysis,
+        overlapAnalysis,
         metadata: {
           dataReliability: this.assessOverallDataReliability(cityData),
           algorithmVersion: '1.0.0',

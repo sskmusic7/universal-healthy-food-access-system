@@ -210,17 +210,18 @@ export async function fetchNASAPopulation(bbox) {
  * Fetch NASA NDVI (vegetation index) for urban farming site selection
  */
 export async function fetchNASANDVI(bbox, startDate, endDate) {
-  // Placeholder - requires NASA Earthdata token
+  // Import the NDVI service
+  const nasaNDVI = await import('./services/nasaNDVI.js');
   
-  console.warn('NASA NDVI fetch requires Earthdata authentication');
-  
-  return {
-    source: 'MODIS_MOD13Q1',
-    bbox,
-    dateRange: { start: startDate, end: endDate },
-    data: [], // Grid of NDVI values (0-1)
-    resolution: '250m'
-  };
+  try {
+    console.log('Fetching NASA MODIS NDVI data for urban farming analysis...');
+    const data = await nasaNDVI.default.fetchNDVIForCity(bbox, startDate, endDate);
+    console.log('✓ NASA NDVI data retrieved');
+    return data;
+  } catch (error) {
+    console.warn('⚠ NASA NDVI fetch failed, continuing without it');
+    return null;
+  }
 }
 
 /**
@@ -284,6 +285,8 @@ export async function fetchNASAPower(lat, lng, startDate, endDate) {
   const baseUrl = 'https://power.larc.nasa.gov/api/temporal/daily/point';
   
   try {
+    console.log(`Fetching NASA POWER data for ${lat}, ${lng} from ${startDate} to ${endDate}`);
+    
     const response = await axios.get(baseUrl, {
       params: {
         parameters: 'ALLSKY_SFC_SW_DWN,T2M,PRECTOTCORR', // Solar, temp, precip
@@ -298,25 +301,31 @@ export async function fetchNASAPower(lat, lng, startDate, endDate) {
 
     const parameters = response.data.properties.parameter;
     
+    const solarMean = parameters.ALLSKY_SFC_SW_DWN ? 
+      Object.values(parameters.ALLSKY_SFC_SW_DWN).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.ALLSKY_SFC_SW_DWN).length : 0;
+    const tempMean = parameters.T2M ? 
+      Object.values(parameters.T2M).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.T2M).length : 0;
+    const precipMean = parameters.PRECTOTCORR ? 
+      Object.values(parameters.PRECTOTCORR).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.PRECTOTCORR).length : 0;
+    
+    console.log(`✅ NASA POWER data retrieved: Solar=${solarMean.toFixed(2)}, Temp=${tempMean.toFixed(1)}°C, Precip=${precipMean.toFixed(1)}mm/day`);
+    
     return {
       source: 'NASA_POWER',
       location: { lat, lng },
       data: {
         ALLSKY_SFC_SW_DWN: {
-          mean: parameters.ALLSKY_SFC_SW_DWN ? 
-            Object.values(parameters.ALLSKY_SFC_SW_DWN).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.ALLSKY_SFC_SW_DWN).length : 0
+          mean: solarMean
         },
         T2M: {
-          mean: parameters.T2M ? 
-            Object.values(parameters.T2M).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.T2M).length : 0
+          mean: tempMean
         },
         PRECTOTCORR: {
-          mean: parameters.PRECTOTCORR ? 
-            Object.values(parameters.PRECTOTCORR).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.PRECTOTCORR).length : 0
+          mean: precipMean
         }
       },
       units: {
-        ALLSKY_SFC_SW_DWN: 'kW-hr/m^2/day',
+        ALLSKY_SFC_SW_DWN: 'MJ/m^2/day',
         T2M: 'Celsius',
         PRECTOTCORR: 'mm/day'
       }
@@ -346,6 +355,14 @@ export async function fetchAllCityData(cityData, options = {}) {
 
   console.log(`Fetching data for ${cityData.name}...`);
 
+  // Convert bounding box array to object format
+  const bbox = Array.isArray(cityData.boundingBox) ? {
+    south: cityData.boundingBox[0],
+    north: cityData.boundingBox[1], 
+    west: cityData.boundingBox[2],
+    east: cityData.boundingBox[3]
+  } : cityData.boundingBox;
+
   const results = {
     city: cityData,
     timestamp: new Date().toISOString(),
@@ -356,7 +373,9 @@ export async function fetchAllCityData(cityData, options = {}) {
     // Always fetch food outlets
     if (includeFoodOutlets) {
       console.log('Fetching food outlets from OpenStreetMap...');
-      results.data.foodOutlets = await fetchFoodOutlets(cityData.boundingBox);
+      // Convert bbox object back to array format for food outlets
+      const bboxArray = [bbox.south, bbox.north, bbox.west, bbox.east];
+      results.data.foodOutlets = await fetchFoodOutlets(bboxArray);
       console.log(`✓ Found ${results.data.foodOutlets.length} food outlets`);
     }
 
@@ -385,7 +404,7 @@ export async function fetchAllCityData(cityData, options = {}) {
     if (includePopulation) {
       console.log('Fetching NASA population density data...');
       try {
-        results.data.population = await fetchNASAPopulation(cityData.boundingBox);
+        results.data.population = await fetchNASAPopulation(bbox);
         console.log('✓ NASA population data retrieved');
       } catch (error) {
         console.warn('⚠ NASA population fetch failed, continuing without it');
@@ -396,7 +415,7 @@ export async function fetchAllCityData(cityData, options = {}) {
     if (includeNDVI) {
       console.log('Fetching NASA NDVI data...');
       try {
-        results.data.ndvi = await fetchNASANDVI(cityData.boundingBox, '2024-01-01', '2024-12-31');
+        results.data.ndvi = await fetchNASANDVI(bbox, '2024-01-01', '2024-12-31');
         console.log('✓ NASA NDVI data retrieved');
       } catch (error) {
         console.warn('⚠ NASA NDVI fetch failed, continuing without it');
@@ -407,7 +426,7 @@ export async function fetchAllCityData(cityData, options = {}) {
     if (includeLST) {
       console.log('Fetching NASA LST data...');
       try {
-        results.data.lst = await fetchNASALST(cityData.boundingBox, [
+        results.data.lst = await fetchNASALST(bbox, [
           '2024-06-01', '2024-07-01', '2024-08-01'
         ]);
         console.log('✓ NASA LST data retrieved');
@@ -421,7 +440,7 @@ export async function fetchAllCityData(cityData, options = {}) {
     if (includePrecipitation) {
       console.log('Fetching NASA precipitation data...');
       try {
-        results.data.precipitation = await fetchNASAPrecipitation(cityData.boundingBox, {
+        results.data.precipitation = await fetchNASAPrecipitation(bbox, {
           start: '2024-01-01',
           end: '2024-12-31'
         });
@@ -435,7 +454,7 @@ export async function fetchAllCityData(cityData, options = {}) {
     if (includeNighttimeLights) {
       console.log('Fetching NASA nighttime lights data...');
       try {
-        results.data.nighttimeLights = await fetchNASANighttimeLights(cityData.boundingBox, {
+        results.data.nighttimeLights = await fetchNASANighttimeLights(bbox, {
           start: '2024-01-01',
           end: '2024-12-31'
         });

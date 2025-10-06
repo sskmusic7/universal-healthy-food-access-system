@@ -8,18 +8,21 @@ class NASA_Population_Service {
 
   async fetchPopulationGrid(bbox) {
     try {
-      await nasaAuth.authenticate();
       console.log('Fetching NASA SEDAC GPWv4 population density data...');
       
-      const mockPopulationData = this.generateMockPopulationData(bbox);
-      
-      return {
-        source: 'SEDAC_GPWv4_MOCK',
-        bbox,
-        data: mockPopulationData,
-        resolution: '1km',
-        analysis: this.analyzePopulationDemand(mockPopulationData)
-      };
+      const realData = await this.fetchRealPopulationData(bbox);
+      if (realData && realData.length > 0) {
+        console.log('✅ Real NASA SEDAC population data retrieved');
+        return {
+          source: 'SEDAC_GPWv4',
+          bbox,
+          data: realData,
+          resolution: '1km',
+          analysis: this.analyzePopulationDemand(realData)
+        };
+      } else {
+        throw new Error('No population data returned from NASA SEDAC API');
+      }
       
     } catch (error) {
       console.error("Error fetching NASA population data:", error);
@@ -27,15 +30,67 @@ class NASA_Population_Service {
     }
   }
 
+  async fetchRealPopulationData(bbox) {
+    try {
+      const { north, south, east, west } = bbox;
+      
+      // NASA SEDAC GPWv4 API endpoint
+      const apiUrl = 'https://sedac.ciesin.columbia.edu/arcgis/rest/services/sedac/gpwv4_population_density/MapServer/0/query';
+      
+      const params = {
+        where: '1=1',
+        outFields: '*',
+        outSR: '4326',
+        f: 'json',
+        geometry: `${west},${south},${east},${north}`,
+        geometryType: 'esriGeometryEnvelope',
+        spatialRel: 'esriSpatialRelIntersects'
+      };
+      
+      const response = await axios.get(apiUrl, { params });
+      
+      if (response.data && response.data.features) {
+        return response.data.features.map(feature => {
+          const coords = feature.geometry.rings[0][0]; // Get first coordinate
+          const attributes = feature.attributes;
+          
+          return {
+            lat: coords[1],
+            lng: coords[0],
+            populationDensity: attributes.POPULATION_DENSITY || 0,
+            totalPopulation: attributes.TOTAL_POPULATION || 0,
+            ageDistribution: {
+              children: Math.round((attributes.TOTAL_POPULATION || 0) * 0.2),
+              adults: Math.round((attributes.TOTAL_POPULATION || 0) * 0.65),
+              elderly: Math.round((attributes.TOTAL_POPULATION || 0) * 0.15)
+            },
+            incomeLevel: this.estimateIncomeLevel(attributes.POPULATION_DENSITY || 0, 'medium'),
+            foodAccessDemand: this.calculateFoodAccessDemand(
+              attributes.TOTAL_POPULATION || 0,
+              { children: 0.2, adults: 0.65, elderly: 0.15 },
+              'medium'
+            ),
+            classification: this.classifyPopulationDensity(attributes.POPULATION_DENSITY || 0)
+          };
+        });
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Real NASA SEDAC API error:', error);
+      throw error;
+    }
+  }
+
   generateMockPopulationData(bbox) {
     const { north, south, east, west } = bbox;
-    const latStep = (north - south) / 15;
-    const lngStep = (east - west) / 15;
+    const latStep = (north - south) / 25; // Increased grid resolution
+    const lngStep = (east - west) / 25;
     
     const gridData = [];
     
-    for (let i = 0; i < 15; i++) {
-      for (let j = 0; j < 15; j++) {
+    for (let i = 0; i < 25; i++) {
+      for (let j = 0; j < 25; j++) {
         const lat = south + (i * latStep);
         const lng = west + (j * lngStep);
         
@@ -43,11 +98,14 @@ class NASA_Population_Service {
         const urbanFactor = this.getUrbanDensityFactor(lat, lng);
         const populationMetrics = this.calculatePopulationMetrics(baseDensity, urbanFactor);
         
+        // Calculate area of each grid cell in km²
+        const cellArea = latStep * lngStep * 111.32 * 111.32 * Math.cos(lat * Math.PI / 180); // Rough conversion to km²
+        
         gridData.push({
           lat,
           lng,
           populationDensity: populationMetrics.density,
-          totalPopulation: populationMetrics.totalPopulation,
+          totalPopulation: Math.round(populationMetrics.density * cellArea), // Population = density * area
           ageDistribution: populationMetrics.ageDistribution,
           incomeLevel: populationMetrics.incomeLevel,
           foodAccessDemand: populationMetrics.foodAccessDemand,
@@ -60,18 +118,19 @@ class NASA_Population_Service {
   }
 
   getBasePopulationDensity(lat, lng) {
-    const urbanCenters = [
-      { lat: 53.7450, lng: -0.3300, density: 2500 },
-      { lat: -1.2921, lng: 36.8219, density: 4500 },
-      { lat: 33.4484, lng: -112.0740, density: 1200 },
-      { lat: 51.5074, lng: -0.1278, density: 5500 },
-      { lat: 35.6762, lng: 139.6503, density: 6200 }
+    // Hull-specific population density centers
+    const hullCenters = [
+      { lat: 53.7624, lng: -0.3301, density: 4500 }, // Hull city center
+      { lat: 53.8, lng: -0.3, density: 3200 },       // Hull suburbs
+      { lat: 53.7, lng: -0.4, density: 2800 },       // Hull outskirts
+      { lat: 53.75, lng: -0.25, density: 3800 },     // Additional urban areas
+      { lat: 53.78, lng: -0.35, density: 2900 }      // Additional suburban areas
     ];
     
     let minDistance = Infinity;
-    let baseDensity = 50;
+    let baseDensity = 800; // Default suburban density for Hull area
     
-    urbanCenters.forEach(center => {
+    hullCenters.forEach(center => {
       const distance = Math.sqrt(
         Math.pow(lat - center.lat, 2) + Math.pow(lng - center.lng, 2)
       );
@@ -81,8 +140,9 @@ class NASA_Population_Service {
       }
     });
     
-    const distanceDecay = Math.max(0.1, 1 - minDistance * 0.3);
-    return Math.max(10, baseDensity * distanceDecay + (Math.random() - 0.5) * baseDensity * 0.5);
+    // More realistic distance decay for urban areas
+    const distanceDecay = Math.max(0.3, 1 - minDistance * 0.2);
+    return Math.max(200, baseDensity * distanceDecay + (Math.random() - 0.5) * baseDensity * 0.3);
   }
 
   getUrbanDensityFactor(lat, lng) {
