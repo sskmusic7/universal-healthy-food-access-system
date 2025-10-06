@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 
 function OverlapAnalysisPanel({ overlapAnalysis, cityData }) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedZone, setSelectedZone] = useState(null);
+  // const [selectedZone, setSelectedZone] = useState(null);
 
   if (!overlapAnalysis) {
     return (

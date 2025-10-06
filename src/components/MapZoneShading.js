@@ -1,7 +1,6 @@
 // MapZoneShading.js - Zone Shading Layer Component
 // Implements zone shading technique for food deserts and intervention sites
 
-import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 
 class MapZoneShading {
