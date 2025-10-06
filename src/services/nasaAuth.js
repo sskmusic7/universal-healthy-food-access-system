@@ -1,0 +1,48 @@
+import axios from "axios";
+
+const NASA_BASE_URL = "https://e4ftl01.cr.usgs.gov";
+const NASA_TOKEN = process.env.REACT_APP_NASA_EARTHDATA_TOKEN;
+
+class NASAAuthService {
+  constructor() {
+    this.token = NASA_TOKEN;
+    this.authenticated = false;
+  }
+
+  async authenticate() {
+    try {
+      if (!this.token) {
+        console.warn("NASA Earthdata token not found - using mock data");
+        this.authenticated = false;
+        return false;
+      }
+
+      // Test authentication with a simple request
+      const response = await axios.get(`${NASA_BASE_URL}/MOLT/MOD13Q1.061/`, {
+        headers: {
+          Authorization: `Bearer ${this.token}`
+        }
+      });
+      
+      this.authenticated = true;
+      console.log("NASA Authentication successful");
+      return true;
+    } catch (error) {
+      console.warn("NASA Authentication failed, using mock data:", error.message);
+      this.authenticated = false;
+      return false;
+    }
+  }
+
+  getAuthHeaders() {
+    return {
+      Authorization: `Bearer ${this.token}`
+    };
+  }
+
+  isAuthenticated() {
+    return this.authenticated;
+  }
+}
+
+export default new NASAAuthService();
