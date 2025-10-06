@@ -14,15 +14,16 @@ const NASA_SEDAC_API = 'https://sedac.ciesin.columbia.edu/data/set/gpw-v4-popula
 const NASA_POWER_API = 'https://power.larc.nasa.gov/api/temporal/daily/point';
 
 // Create axios instance with SEDAC config
-const sedacAxios = axios.create({
-  baseURL: NASA_SEDAC_API,
-  timeout: 60000,
-  headers: {
-    'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
-    'Accept': 'application/json',
-    'Client-Id': 'HealthyFoodAccessSystem'
-  }
-});
+// Commented out as we're using direct axios calls with specific configs
+// const sedacAxios = axios.create({
+//   baseURL: NASA_SEDAC_API,
+//   timeout: 60000,
+//   headers: {
+//     'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
+//     'Accept': 'application/json',
+//     'Client-Id': 'HealthyFoodAccessSystem'
+//   }
+// });
 
 // Create axios instance with CMR config
 const cmrAxios = axios.create({
