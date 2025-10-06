@@ -282,7 +282,7 @@ export async function fetchNASAPopulation(bbox) {
               count: 2,
               propertyName: 'pop_den_2015,un_adj_2015'
             },
-            timeout: 30000,
+            timeout: 15000,
             headers: {
               'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
               'Accept': 'application/json',
@@ -321,7 +321,7 @@ export async function fetchNASAPopulation(bbox) {
         count: 3,
         propertyName: 'pop_den_2015,un_adj_2015'
       },
-      timeout: 30000,
+      timeout: 15000,
       headers: {
         'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
         'Accept': 'application/json',
@@ -541,6 +541,18 @@ export async function fetchAllCityData(cityData, options = {}) {
     }
     if (includeLST) {
       results.data.lst = await fetchNASALST(cityData.boundingBox, '2024-06-01', '2024-08-31');
+    }
+
+    // Generate AI solution and run algorithm analysis
+    console.log('Generating AI solution and running algorithm analysis...');
+    try {
+      results.aiSolution = await generateAISolution(results);
+      results.algorithmAnalysis = await runComprehensiveAnalysis(results);
+      results.overlapAnalysis = results.algorithmAnalysis.overlapAnalysis;
+      console.log('✓ AI solution and algorithm analysis completed');
+    } catch (error) {
+      console.error('Error in AI/algorithm processing:', error);
+      // Don't throw - continue with basic data
     }
 
     console.log('✓ All data fetched successfully');
