@@ -5,6 +5,9 @@ import React, { useState } from 'react';
 import CitySelector from './components/CitySelector';
 import Map from './components/Map';
 import MetricsPanel from './components/MetricsPanel';
+import AISolutionPanel from './components/AISolutionPanel';
+import AlgorithmAnalysisPanel from './components/AlgorithmAnalysisPanel';
+import OverlapAnalysisPanel from './components/OverlapAnalysisPanel';
 import { fetchAllCityData } from './dataFetchers';
 import './App.css';
 
@@ -27,7 +30,11 @@ function App() {
       const data = await fetchAllCityData(cityInfo, {
         includeFoodOutlets: true,
         includePower: true,
-        includeNASAData: false // Set to true when you have NASA auth
+        includePopulation: true,    // NASA SEDAC Population Density
+        includeNDVI: true,          // NASA MODIS NDVI
+        includeLST: true,           // NASA MODIS LST
+        includePrecipitation: true, // NASA GPM IMERG
+        includeNighttimeLights: true // NASA Black Marble
       });
 
       setCityData(data);
@@ -137,7 +144,29 @@ function App() {
               cityData={selectedCity}
               foodOutlets={cityData?.data?.foodOutlets}
               nasaPowerData={cityData?.data?.power}
+              nasaPrecipitationData={cityData?.data?.precipitation}
+              nasaNighttimeData={cityData?.data?.nighttimeLights}
+              nasaLSTData={cityData?.data?.lst}
+              nasaPopulationData={cityData?.data?.population}
             />
+            
+            {/* AI Solution Panel */}
+            <AISolutionPanel 
+              aiSolution={cityData?.data?.aiSolution}
+              cityData={cityData}
+            />
+            
+      {/* Algorithm Analysis Panel */}
+      <AlgorithmAnalysisPanel
+        algorithmAnalysis={cityData?.data?.algorithmAnalysis}
+        cityData={cityData}
+      />
+
+      {/* Overlap Analysis Panel */}
+      <OverlapAnalysisPanel
+        overlapAnalysis={cityData?.data?.algorithmAnalysis?.overlapAnalysis}
+        cityData={cityData}
+      />
           </div>
         </div>
 
@@ -151,6 +180,8 @@ function App() {
             cityData={selectedCity}
             foodOutlets={cityData?.data?.foodOutlets}
             loading={loading}
+            algorithmAnalysis={cityData?.algorithmAnalysis}
+            overlapAnalysis={cityData?.overlapAnalysis}
           />
         </div>
       </div>

@@ -1,9 +1,11 @@
 // Map.js - Interactive Map Component
-// Displays food outlets with classification markers
+// Displays food outlets with classification markers and zone shading
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import MapZoneShading from './MapZoneShading';
+import ZoneToggleControls from './ZoneToggleControls';
 
 // Fix for default markers in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -30,10 +32,16 @@ const createCustomIcon = (color) => {
   });
 };
 
-function Map({ cityData, foodOutlets, loading }) {
+function Map({ cityData, foodOutlets, loading, algorithmAnalysis, overlapAnalysis }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
+  const zoneShadingRef = useRef(null);
+  const [zoneStates, setZoneStates] = useState({
+    foodDeserts: false,
+    interventionSites: false,
+    overlaps: false
+  });
 
   useEffect(() => {
     if (!cityData) return;
@@ -48,6 +56,10 @@ function Map({ cityData, foodOutlets, loading }) {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(mapInstanceRef.current);
+
+      // Initialize zone shading system
+      zoneShadingRef.current = new MapZoneShading(mapInstanceRef.current);
+      zoneShadingRef.current.initialize();
     } else {
       // Update map center
       mapInstanceRef.current.setView([cityData.lat, cityData.lng], 12);
@@ -159,15 +171,75 @@ function Map({ cityData, foodOutlets, loading }) {
 
   }, [cityData, foodOutlets]);
 
+  // Update zone shading when algorithm analysis changes
+  useEffect(() => {
+    if (zoneShadingRef.current && algorithmAnalysis && cityData) {
+      const cityBounds = {
+        north: cityData.boundingBox[1],
+        south: cityData.boundingBox[0],
+        east: cityData.boundingBox[3],
+        west: cityData.boundingBox[2]
+      };
+
+      zoneShadingRef.current.updateZones(algorithmAnalysis, cityBounds);
+      
+      // Update available zones state
+      setZoneStates({
+        foodDeserts: !!(algorithmAnalysis.foodDeserts),
+        interventionSites: !!(algorithmAnalysis.interventionSites),
+        overlaps: !!(overlapAnalysis && overlapAnalysis.conflictZones)
+      });
+    }
+  }, [algorithmAnalysis, overlapAnalysis, cityData]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (zoneShadingRef.current) {
+        zoneShadingRef.current.destroy();
+        zoneShadingRef.current = null;
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
   }, []);
+
+  // Zone toggle handlers
+  const handleToggleZone = (zoneType, visible) => {
+    if (zoneShadingRef.current) {
+      zoneShadingRef.current.toggleZoneLayer(zoneType, visible);
+    }
+    setZoneStates(prev => ({
+      ...prev,
+      [zoneType]: visible
+    }));
+  };
+
+  const handleClearAllZones = () => {
+    if (zoneShadingRef.current) {
+      zoneShadingRef.current.clearAllZones();
+    }
+    setZoneStates({
+      foodDeserts: false,
+      interventionSites: false,
+      overlaps: false
+    });
+  };
+
+  const handleShowAllZones = () => {
+    if (zoneShadingRef.current) {
+      zoneShadingRef.current.toggleZoneLayer('foodDeserts', true);
+      zoneShadingRef.current.toggleZoneLayer('interventionSites', true);
+      zoneShadingRef.current.toggleZoneLayer('overlaps', true);
+    }
+    setZoneStates({
+      foodDeserts: true,
+      interventionSites: true,
+      overlaps: true
+    });
+  };
 
   if (!cityData) {
     return (
@@ -195,6 +267,15 @@ function Map({ cityData, foodOutlets, loading }) {
 
   return (
     <div className="mobile-map" style={{ position: 'relative', height: '100%' }}>
+      {/* Zone Toggle Controls */}
+      <ZoneToggleControls
+        onToggleZone={handleToggleZone}
+        onClearAllZones={handleClearAllZones}
+        onShowAllZones={handleShowAllZones}
+        availableZones={zoneStates}
+        isVisible={!!algorithmAnalysis}
+      />
+
       {/* Map Container */}
       <div 
         ref={mapRef} 
@@ -316,11 +397,44 @@ function Map({ cityData, foodOutlets, loading }) {
         </div>
       </div>
 
-      {/* CSS for spinner animation */}
+      {/* CSS for spinner animation and zone shading */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        
+        /* Zone shading styles */
+        .food-desert-zone {
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .food-desert-zone:hover {
+          filter: brightness(1.1);
+        }
+        
+        .intervention-site-zone {
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .intervention-site-zone:hover {
+          filter: brightness(1.1);
+        }
+        
+        .overlap-zone {
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .overlap-zone:hover {
+          filter: brightness(1.1);
+        }
+        
+        /* Zone toggle controls */
+        .zone-toggle-controls {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
       `}</style>
     </div>

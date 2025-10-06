@@ -3,8 +3,38 @@
 
 import axios from 'axios';
 
+// Base APIs
 const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
+
+// NASA APIs Configuration
+const NASA_EARTHDATA_TOKEN = process.env.REACT_APP_NASA_EARTHDATA_TOKEN;
+const NASA_CMR_API = 'https://cmr.earthdata.nasa.gov/search/granules.json';
+const NASA_SEDAC_API = 'https://sedac.ciesin.columbia.edu/data/set/gpw-v4-population-density-adjusted-to-2015-unwpp-country-totals-rev11/wfs';
+const NASA_POWER_API = 'https://power.larc.nasa.gov/api/temporal/daily/point';
+
+// Create axios instance with SEDAC config
+// Commented out as we're using direct axios calls with specific configs
+// const sedacAxios = axios.create({
+//   baseURL: NASA_SEDAC_API,
+//   timeout: 60000,
+//   headers: {
+//     'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
+//     'Accept': 'application/json',
+//     'Client-Id': 'HealthyFoodAccessSystem'
+//   }
+// });
+
+// Create axios instance with CMR config
+const cmrAxios = axios.create({
+  baseURL: NASA_CMR_API,
+  timeout: 60000,
+  headers: {
+    'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
+    'Accept': 'application/json',
+    'Client-Id': 'HealthyFoodAccessSystem'
+  }
+});
 
 // ==================== CITY BOUNDARY & GEOCODING ====================
 
@@ -189,67 +219,209 @@ function getOutletClassification(tags) {
 // ==================== NASA EARTHDATA ====================
 
 /**
- * Fetch NASA population density (SEDAC GPWv4)
- * Note: This requires NASA Earthdata authentication
+ * Fetch NASA population data from SEDAC
  */
+// Cache for population data responses
+const populationCache = new Map();
+
+// Helper to subdivide large bounding boxes
+function subdivideBBox(bbox, divisions = 2) {
+  const [south, north, west, east] = bbox;
+  const latStep = (north - south) / divisions;
+  const lonStep = (east - west) / divisions;
+  const subBoxes = [];
+
+  for (let i = 0; i < divisions; i++) {
+    for (let j = 0; j < divisions; j++) {
+      subBoxes.push([
+        south + (i * latStep),
+        south + ((i + 1) * latStep),
+        west + (j * lonStep),
+        west + ((j + 1) * lonStep)
+      ]);
+    }
+  }
+  return subBoxes;
+}
+
+// Helper to generate cache key
+function getCacheKey(bbox) {
+  return bbox.join(',');
+}
+
 export async function fetchNASAPopulation(bbox) {
-  // Placeholder - actual implementation requires NASA Earthdata token
-  // For hackathon, you can use cached data or estimate
+  const [south, north, west, east] = bbox;
+  const cacheKey = getCacheKey(bbox);
   
-  console.warn('NASA Population fetch requires Earthdata authentication');
+  // Check cache first
+  if (populationCache.has(cacheKey)) {
+    console.log('Using cached population data');
+    return populationCache.get(cacheKey);
+  }
   
-  // Return mock structure for development
-  return {
-    source: 'SEDAC_GPWv4',
-    bbox,
-    data: [], // Grid of population density values
-    resolution: '1km',
-    timestamp: new Date().toISOString()
-  };
+  try {
+    // Step 1: Validate coordinates
+    validateBBox([south, north, west, east]);
+    
+    // Step 2: If area is large, subdivide and fetch in parallel
+    const area = Math.abs((north - south) * (east - west));
+    if (area > 0.1) { // Threshold for subdivision
+      console.log('Large area detected, subdividing requests');
+      const subBoxes = subdivideBBox(bbox);
+      const subResults = await Promise.all(
+        subBoxes.map(subBox => 
+          axios.get(NASA_SEDAC_API, {
+            params: {
+              service: 'WFS',
+              version: '2.0.0',
+              request: 'GetFeature',
+              typeName: 'gpw-v4:gpw-v4-population-density-adjusted-to-2015-unwpp-country-totals-rev11',
+              outputFormat: 'application/json',
+              bbox: subBox.join(','),
+              srsName: 'EPSG:4326',
+              count: 2,
+              propertyName: 'pop_den_2015,un_adj_2015'
+            },
+            timeout: 15000,
+            headers: {
+              'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
+              'Accept': 'application/json',
+              'User-Agent': 'HealthyFoodAccessSystem/1.0'
+            },
+            validateStatus: status => status === 200
+          }).catch(err => ({ data: { features: [] }})) // Continue even if sub-request fails
+        )
+      );
+
+      // Combine results
+      const features = subResults.flatMap(r => r.data?.features || []);
+      const result = {
+        source: 'SEDAC_GPWv4',
+        bbox,
+        data: features,
+        resolution: '1km',
+        timestamp: new Date().toISOString()
+      };
+
+      // Cache the result
+      populationCache.set(cacheKey, result);
+      return result;
+    }
+
+    // Step 3: For small areas, make single request
+    const response = await axios.get(NASA_SEDAC_API, {
+      params: {
+        service: 'WFS',
+        version: '2.0.0',
+        request: 'GetFeature',
+        typeName: 'gpw-v4:gpw-v4-population-density-adjusted-to-2015-unwpp-country-totals-rev11',
+        outputFormat: 'application/json',
+        bbox: `${west},${south},${east},${north}`,
+        srsName: 'EPSG:4326',
+        count: 3,
+        propertyName: 'pop_den_2015,un_adj_2015'
+      },
+      timeout: 15000,
+      headers: {
+        'Authorization': `Bearer ${NASA_EARTHDATA_TOKEN}`,
+        'Accept': 'application/json',
+        'User-Agent': 'HealthyFoodAccessSystem/1.0'
+      },
+      validateStatus: status => status === 200,
+      maxRedirects: 5
+    });
+
+    if (!response.data || !response.data.features) {
+      throw new Error('Invalid response format from SEDAC API');
+    }
+
+    return {
+      source: 'SEDAC_GPWv4',
+      bbox,
+      data: response.data.features,
+      resolution: '1km',
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('NASA Population data fetch error:', error.response?.data || error.message);
+    throw error;
+  }
 }
 
 /**
  * Fetch NASA NDVI (vegetation index) for urban farming site selection
  */
 export async function fetchNASANDVI(bbox, startDate, endDate) {
-  // Placeholder - requires NASA Earthdata token
+  const [south, north, west, east] = bbox;
   
-  console.warn('NASA NDVI fetch requires Earthdata authentication');
-  
-  return {
-    source: 'MODIS_MOD13Q1',
-    bbox,
-    dateRange: { start: startDate, end: endDate },
-    data: [], // Grid of NDVI values (0-1)
-    resolution: '250m'
-  };
+  try {
+    const response = await cmrAxios.get('', {
+      params: {
+        short_name: 'MOD13Q1',
+        version: '061',
+        bounding_box: `${west},${south},${east},${north}`,
+        temporal: `${startDate}T00:00:00Z,${endDate}T23:59:59Z`,
+        page_size: 100
+      }
+    });
+
+    if (!response.data || !response.data.feed || !response.data.feed.entry) {
+      throw new Error('Invalid response format from CMR API');
+    }
+
+    return {
+      source: 'MODIS_MOD13Q1',
+      bbox,
+      dateRange: { start: startDate, end: endDate },
+      data: response.data.feed.entry,
+      resolution: '250m'
+    };
+  } catch (error) {
+    console.error('NASA NDVI fetch error:', error.response?.data || error.message);
+    throw error;
+  }
 }
 
 /**
  * Fetch NASA Land Surface Temperature (heat exposure)
  */
 export async function fetchNASALST(bbox, startDate, endDate) {
-  // Placeholder - requires NASA Earthdata token
+  const [south, north, west, east] = bbox;
   
-  console.warn('NASA LST fetch requires Earthdata authentication');
-  
-  return {
-    source: 'MODIS_MOD11A2',
-    bbox,
-    dateRange: { start: startDate, end: endDate },
-    data: [], // Grid of temperature values (Kelvin)
-    resolution: '1km'
-  };
+  try {
+    const response = await cmrAxios.get('', {
+      params: {
+        short_name: 'MOD11A2',
+        version: '061',
+        bounding_box: `${west},${south},${east},${north}`,
+        temporal: `${startDate}T00:00:00Z,${endDate}T23:59:59Z`,
+        page_size: 100
+      }
+    });
+
+    if (!response.data || !response.data.feed || !response.data.feed.entry) {
+      throw new Error('Invalid response format from CMR API');
+    }
+
+    return {
+      source: 'MODIS_MOD11A2',
+      bbox,
+      dateRange: { start: startDate, end: endDate },
+      data: response.data.feed.entry,
+      resolution: '1km'
+    };
+  } catch (error) {
+    console.error('NASA LST fetch error:', error.response?.data || error.message);
+    throw error;
+  }
 }
 
 /**
  * Fetch NASA POWER solar/climate data (for urban farming)
  */
 export async function fetchNASAPower(lat, lng, startDate, endDate) {
-  const baseUrl = 'https://power.larc.nasa.gov/api/temporal/daily/point';
-  
   try {
-    const response = await axios.get(baseUrl, {
+    const response = await axios.get(NASA_POWER_API, {
       params: {
         parameters: 'ALLSKY_SFC_SW_DWN,T2M,PRECTOTCORR', // Solar, temp, precip
         community: 'AG',
@@ -258,36 +430,52 @@ export async function fetchNASAPower(lat, lng, startDate, endDate) {
         start: startDate.replace(/-/g, ''),
         end: endDate.replace(/-/g, ''),
         format: 'JSON'
-      }
+      },
+      timeout: 30000
     });
+
+    if (!response.data || !response.data.properties || !response.data.properties.parameter) {
+      throw new Error('Invalid response format from NASA POWER API');
+    }
 
     const parameters = response.data.properties.parameter;
     
+    // Helper function to calculate mean safely
+    const calculateMean = (data) => {
+      if (!data) return 0;
+      const values = Object.values(data);
+      return values.length > 0 ? values.reduce((sum, val) => sum + (val || 0), 0) / values.length : 0;
+    };
+
     return {
       source: 'NASA_POWER',
       location: { lat, lng },
       data: {
         ALLSKY_SFC_SW_DWN: {
-          mean: parameters.ALLSKY_SFC_SW_DWN ? 
-            Object.values(parameters.ALLSKY_SFC_SW_DWN).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.ALLSKY_SFC_SW_DWN).length : 0
+          mean: calculateMean(parameters.ALLSKY_SFC_SW_DWN),
+          values: parameters.ALLSKY_SFC_SW_DWN || {}
         },
         T2M: {
-          mean: parameters.T2M ? 
-            Object.values(parameters.T2M).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.T2M).length : 0
+          mean: calculateMean(parameters.T2M),
+          values: parameters.T2M || {}
         },
         PRECTOTCORR: {
-          mean: parameters.PRECTOTCORR ? 
-            Object.values(parameters.PRECTOTCORR).reduce((sum, val) => sum + val, 0) / Object.keys(parameters.PRECTOTCORR).length : 0
+          mean: calculateMean(parameters.PRECTOTCORR),
+          values: parameters.PRECTOTCORR || {}
         }
       },
       units: {
         ALLSKY_SFC_SW_DWN: 'kW-hr/m^2/day',
         T2M: 'Celsius',
         PRECTOTCORR: 'mm/day'
+      },
+      dateRange: {
+        start: startDate,
+        end: endDate
       }
     };
   } catch (error) {
-    console.error('NASA POWER fetch error:', error);
+    console.error('NASA POWER fetch error:', error.response?.data || error.message);
     throw error;
   }
 }
@@ -353,6 +541,18 @@ export async function fetchAllCityData(cityData, options = {}) {
     }
     if (includeLST) {
       results.data.lst = await fetchNASALST(cityData.boundingBox, '2024-06-01', '2024-08-31');
+    }
+
+    // Generate AI solution and run algorithm analysis
+    console.log('Generating AI solution and running algorithm analysis...');
+    try {
+      results.aiSolution = await generateAISolution(results);
+      results.algorithmAnalysis = await runComprehensiveAnalysis(results);
+      results.overlapAnalysis = results.algorithmAnalysis.overlapAnalysis;
+      console.log('✓ AI solution and algorithm analysis completed');
+    } catch (error) {
+      console.error('Error in AI/algorithm processing:', error);
+      // Don't throw - continue with basic data
     }
 
     console.log('✓ All data fetched successfully');

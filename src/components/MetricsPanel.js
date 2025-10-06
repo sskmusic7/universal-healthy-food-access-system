@@ -3,7 +3,7 @@
 
 import React from 'react';
 
-function MetricsPanel({ cityData, foodOutlets, nasaPowerData }) {
+function MetricsPanel({ cityData, foodOutlets, nasaPowerData, nasaPrecipitationData, nasaNighttimeData, nasaLSTData, nasaPopulationData }) {
   if (!cityData || !foodOutlets) {
     return (
       <div style={{
@@ -212,7 +212,7 @@ function MetricsPanel({ cityData, foodOutlets, nasaPowerData }) {
             lineHeight: '1.6'
           }}>
             <div style={{ marginBottom: '4px' }}>
-              <strong>Solar Irradiance:</strong> {nasaPowerData.data.ALLSKY_SFC_SW_DWN?.mean?.toFixed(2)} kW-hr/m²/day
+              <strong>Solar Irradiance:</strong> {nasaPowerData.data.ALLSKY_SFC_SW_DWN?.mean?.toFixed(2)} MJ/m²/day
             </div>
             <div style={{ marginBottom: '4px' }}>
               <strong>Avg Temperature:</strong> {nasaPowerData.data.T2M?.mean?.toFixed(1)}°C
@@ -229,6 +229,217 @@ function MetricsPanel({ cityData, foodOutlets, nasaPowerData }) {
             }}>
               Data from NASA POWER API (last 12 months)
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* NASA Precipitation Data */}
+      {nasaPrecipitationData && (
+        <div style={{ marginBottom: '16px' }}>
+          <h4 style={{ 
+            fontSize: '14px', 
+            margin: '0 0 8px 0',
+            color: '#495057'
+          }}>
+            Precipitation Analysis (NASA GPM IMERG)
+          </h4>
+          
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#e7f3ff',
+            border: '1px solid #0ea5e9',
+            borderRadius: '4px',
+            fontSize: '12px',
+            lineHeight: '1.6'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Annual Precipitation:</strong> {nasaPrecipitationData.analysis?.averageAnnualPrecipitation} mm/year
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Dry Days:</strong> {nasaPrecipitationData.analysis?.averageDryDays} days/year
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Heavy Rain Days:</strong> {nasaPrecipitationData.analysis?.averageHeavyRainDays} days/year
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <strong>Best Urban Farm Areas:</strong> {nasaPrecipitationData.analysis?.bestUrbanFarmingAreas?.length || 0} identified
+            </div>
+            
+            {nasaPrecipitationData.analysis?.recommendations?.length > 0 && (
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#0c4a6e',
+                marginTop: '8px',
+                paddingTop: '8px',
+                borderTop: '1px solid #0ea5e9'
+              }}>
+                <strong>Recommendations:</strong><br/>
+                {nasaPrecipitationData.analysis.recommendations.map((rec, index) => (
+                  <div key={index} style={{ marginTop: '4px' }}>
+                    • {rec.message}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* NASA Nighttime Lights Data */}
+      {nasaNighttimeData && (
+        <div style={{ marginBottom: '16px' }}>
+          <h4 style={{ 
+            fontSize: '14px', 
+            margin: '0 0 8px 0',
+            color: '#495057'
+          }}>
+            Commercial Activity (NASA Black Marble)
+          </h4>
+          
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #fbbf24',
+            borderRadius: '4px',
+            fontSize: '12px',
+            lineHeight: '1.6'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Avg Brightness:</strong> {nasaNighttimeData.analysis?.averageBrightness}/100
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>High Activity Areas:</strong> {nasaNighttimeData.analysis?.highActivityCount} zones
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Informal Market Areas:</strong> {nasaNighttimeData.analysis?.informalMarketAreas} potential sites
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <strong>Food Outlet Areas:</strong> {nasaNighttimeData.analysis?.foodOutletAreas} high-probability zones
+            </div>
+            
+            {nasaNighttimeData.analysis?.recommendations?.length > 0 && (
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#856404',
+                marginTop: '8px',
+                paddingTop: '8px',
+                borderTop: '1px solid #fbbf24'
+              }}>
+                <strong>Market Analysis:</strong><br/>
+                {nasaNighttimeData.analysis.recommendations.map((rec, index) => (
+                  <div key={index} style={{ marginTop: '4px' }}>
+                    • {rec.message}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* NASA LST Heat Analysis Data */}
+      {nasaLSTData && (
+        <div style={{ marginBottom: '16px' }}>
+          <h4 style={{ 
+            fontSize: '14px', 
+            margin: '0 0 8px 0',
+            color: '#495057'
+          }}>
+            Heat Analysis (NASA MODIS LST)
+          </h4>
+          
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #dc2626',
+            borderRadius: '4px',
+            fontSize: '12px',
+            lineHeight: '1.6'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Avg Temperature:</strong> {nasaLSTData.analysis?.averageTemperature}°C
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Extreme Heat Zones:</strong> {nasaLSTData.analysis?.extremeHeatZones} areas
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Walking Barriers:</strong> {nasaLSTData.analysis?.walkingBarriers} zones
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <strong>Affected Population:</strong> {nasaLSTData.analysis?.affectedPopulation?.toLocaleString()} people
+            </div>
+            
+            {nasaLSTData.analysis?.recommendations?.length > 0 && (
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#991b1b',
+                marginTop: '8px',
+                paddingTop: '8px',
+                borderTop: '1px solid #dc2626'
+              }}>
+                <strong>Heat Mitigation:</strong><br/>
+                {nasaLSTData.analysis.recommendations.map((rec, index) => (
+                  <div key={index} style={{ marginTop: '4px' }}>
+                    • {rec.message}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* NASA Population Density Data */}
+      {nasaPopulationData && (
+        <div style={{ marginBottom: '16px' }}>
+          <h4 style={{ 
+            fontSize: '14px', 
+            margin: '0 0 8px 0',
+            color: '#495057'
+          }}>
+            Population Analysis (NASA SEDAC GPWv4)
+          </h4>
+          
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #0ea5e9',
+            borderRadius: '4px',
+            fontSize: '12px',
+            lineHeight: '1.6'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Total Population:</strong> {nasaPopulationData.analysis?.totalPopulation?.toLocaleString()} people
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Avg Density:</strong> {nasaPopulationData.analysis?.averageDensity} people/km²
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>High Density Zones:</strong> {nasaPopulationData.analysis?.highDensityZones} areas
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <strong>Vulnerable Population:</strong> {nasaPopulationData.analysis?.totalVulnerablePopulation?.toLocaleString()} people
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <strong>Food Access Demand:</strong> {nasaPopulationData.analysis?.totalFoodAccessDemand?.toLocaleString()} score
+            </div>
+            
+            {nasaPopulationData.analysis?.recommendations?.length > 0 && (
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#0c4a6e',
+                marginTop: '8px',
+                paddingTop: '8px',
+                borderTop: '1px solid #0ea5e9'
+              }}>
+                <strong>Population Insights:</strong><br/>
+                {nasaPopulationData.analysis.recommendations.map((rec, index) => (
+                  <div key={index} style={{ marginTop: '4px' }}>
+                    • {rec.message}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
