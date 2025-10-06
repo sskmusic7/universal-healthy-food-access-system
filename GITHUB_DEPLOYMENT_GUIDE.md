@@ -1,5 +1,5 @@
 # 🌍 GitHub Deployment Guide
-## Universal Healthy Food Access System - NASA Space Apps 2024
+## Universal Healthy Food Access System - NASA Space Apps 2025
 
 ### 🚀 Quick Deploy (3 Steps)
 
@@ -7,7 +7,7 @@
 1. Go to [GitHub.com](https://github.com) and sign in
 2. Click **"New repository"** (green button)
 3. Repository name: `universal-healthy-food-access-system`
-4. Description: `Universal Healthy Food Access System - NASA Space Apps Challenge 2024`
+4. Description: `Universal Healthy Food Access System - NASA Space Apps Challenge 2025`
 5. Make it **Public** ✅
 6. Don't check "Add a README file" (we already have one)
 7. Click **"Create repository"**

@@ -109,19 +109,19 @@ async function testFetchFoodOutlets(bbox) {
   }
 }
 
-// Test NASA POWER API
+// Test NASA POWER API with proper validation
 async function testNASAPower(lat, lng) {
   try {
     console.log(`\n🌞 Testing NASA POWER API...`);
-    
+
     const baseUrl = 'https://power.larc.nasa.gov/api/temporal/daily/point';
     const today = new Date();
     const lastYear = new Date(today);
     lastYear.setFullYear(today.getFullYear() - 1);
-    
+
     const startDate = lastYear.toISOString().split('T')[0].replace(/-/g, '');
     const endDate = today.toISOString().split('T')[0].replace(/-/g, '');
-    
+
     const response = await axios.get(baseUrl, {
       params: {
         parameters: 'ALLSKY_SFC_SW_DWN,T2M,PRECTOTCORR',
@@ -135,13 +135,56 @@ async function testNASAPower(lat, lng) {
     });
 
     const data = response.data.properties.parameter;
-    
-    console.log(`✅ NASA POWER data retrieved`);
-    console.log(`   Solar Irradiance: ${data.ALLSKY_SFC_SW_DWN?.mean?.toFixed(2)} kW-hr/m²/day`);
-    console.log(`   Avg Temperature: ${data.T2M?.mean?.toFixed(1)}°C`);
-    console.log(`   Precipitation: ${data.PRECTOTCORR?.mean?.toFixed(1)} mm/day`);
 
-    return data;
+    // Helper to calculate mean, filtering fill values (-999)
+    const calculateMean = (dataObj) => {
+      if (!dataObj) return null;
+      const values = Object.values(dataObj).filter(v => v !== null && v !== undefined && v !== -999);
+      if (values.length === 0) return null;
+      return values.reduce((sum, val) => sum + val, 0) / values.length;
+    };
+
+    // Calculate data quality
+    const getDataQuality = (dataObj) => {
+      if (!dataObj) return { total: 0, valid: 0, completeness: 0 };
+      const allValues = Object.values(dataObj);
+      const validValues = allValues.filter(v => v !== null && v !== undefined && v !== -999);
+      return {
+        total: allValues.length,
+        valid: validValues.length,
+        completeness: allValues.length > 0 ? (validValues.length / allValues.length) : 0
+      };
+    };
+
+    const solarMean = calculateMean(data.ALLSKY_SFC_SW_DWN);
+    const tempMean = calculateMean(data.T2M);
+    const precipMean = calculateMean(data.PRECTOTCORR);
+
+    const solarQuality = getDataQuality(data.ALLSKY_SFC_SW_DWN);
+    const tempQuality = getDataQuality(data.T2M);
+    const precipQuality = getDataQuality(data.PRECTOTCORR);
+
+    // Validate results
+    if (solarMean === null || tempMean === null || precipMean === null) {
+      throw new Error('NASA POWER data contains only fill values');
+    }
+
+    if (isNaN(solarMean) || isNaN(tempMean) || isNaN(precipMean)) {
+      throw new Error('NASA POWER data contains invalid values');
+    }
+
+    console.log(`✅ NASA POWER data validated`);
+    console.log(`   Solar Irradiance: ${solarMean.toFixed(2)} kW-hr/m²/day (${solarQuality.valid}/${solarQuality.total} valid points)`);
+    console.log(`   Avg Temperature: ${tempMean.toFixed(1)}°C (${tempQuality.valid}/${tempQuality.total} valid points)`);
+    console.log(`   Precipitation: ${precipMean.toFixed(1)} mm/day (${precipQuality.valid}/${precipQuality.total} valid points)`);
+
+    // Warn about low data quality
+    const avgCompleteness = (solarQuality.completeness + tempQuality.completeness + precipQuality.completeness) / 3;
+    if (avgCompleteness < 0.5) {
+      console.warn(`   ⚠ Low data completeness: ${(avgCompleteness * 100).toFixed(0)}%`);
+    }
+
+    return { solarMean, tempMean, precipMean, quality: { solarQuality, tempQuality, precipQuality } };
   } catch (error) {
     console.error(`❌ NASA POWER fetch failed: ${error.message}`);
     throw error;

@@ -3,7 +3,16 @@
 
 import React from 'react';
 
-function MetricsPanel({ cityData, foodOutlets, nasaPowerData }) {
+function MetricsPanel(props = {}) {
+  const {
+    cityData = null,
+    foodOutlets = [],
+    nasaPowerData = null,
+    aiPlan = null,
+    aiLoading = false,
+    aiError = null,
+    onGenerateAiPlan = () => {}
+  } = props;
   if (!cityData || !foodOutlets) {
     return (
       <div style={{
@@ -236,26 +245,38 @@ function MetricsPanel({ cityData, foodOutlets, nasaPowerData }) {
       {/* Quick Actions */}
       <div>
         <button
-          onClick={() => {
-            // This will trigger the AI solution generator (to be implemented)
-            alert('AI Solution Generator coming next!');
-          }}
+          onClick={onGenerateAiPlan}
+          disabled={aiLoading}
           style={{
             width: '100%',
             padding: '10px',
-            backgroundColor: '#10b981',
+            backgroundColor: aiLoading ? '#6b7280' : '#10b981',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: 'pointer',
+            cursor: aiLoading ? 'not-allowed' : 'pointer',
             fontSize: '14px',
             fontWeight: '500',
             marginBottom: '8px',
             transition: 'background-color 0.2s'
           }}
         >
-          Generate AI Solution Map
+          {aiLoading ? 'Generating...' : 'Generate AI Solution Map'}
         </button>
+
+        {aiError && (
+          <div style={{
+            marginBottom: '8px',
+            padding: '6px 8px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#b91c1c'
+          }}>
+            {aiError}
+          </div>
+        )}
         
         <button
           onClick={() => {
@@ -278,6 +299,112 @@ function MetricsPanel({ cityData, foodOutlets, nasaPowerData }) {
           View Raw Data (Console)
         </button>
       </div>
+
+      {/* AI Solution Plan */}
+      {aiPlan && (
+        <div style={{
+          marginTop: '16px',
+          padding: '12px',
+          backgroundColor: '#f0f9ff',
+          border: '1px solid #0ea5e9',
+          borderRadius: '4px'
+        }}>
+          <h4 style={{
+            fontSize: '14px',
+            margin: '0 0 8px 0',
+            color: '#0c4a6e'
+          }}>
+            🤖 AI Strategy Overview
+          </h4>
+
+          <div style={{
+            fontSize: '12px',
+            color: '#0f172a',
+            marginBottom: '8px'
+          }}>
+            {aiPlan.summary}
+          </div>
+
+          {aiPlan.recommendations?.length > 0 && (
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#0369a1',
+                marginBottom: '4px'
+              }}>
+                Priority Sites
+              </div>
+              <ul style={{
+                margin: 0,
+                paddingLeft: '18px',
+                fontSize: '12px',
+                color: '#0f172a'
+              }}>
+                {aiPlan.recommendations.map((rec, index) => (
+                  <li key={index} style={{ marginBottom: '6px' }}>
+                    <strong>{rec.title || rec.interventionType}</strong>
+                    {rec.priority ? ` (${rec.priority})` : ''}
+                    <br />
+                    <span style={{ color: '#475569' }}>
+                      {rec.rationale}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {aiPlan.implementationRoadmap?.length > 0 && (
+            <div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#0369a1',
+                marginBottom: '4px'
+              }}>
+                Implementation Roadmap
+              </div>
+              <div style={{ fontSize: '12px', color: '#0f172a', display: 'grid', gap: '6px' }}>
+                {aiPlan.implementationRoadmap.map((phase, index) => (
+                  <div key={index} style={{
+                    backgroundColor: 'white',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '4px',
+                    padding: '6px'
+                  }}>
+                    <div style={{ fontWeight: '600', color: '#0c4a6e' }}>
+                      {phase.phase} — {phase.duration}
+                    </div>
+                    <div style={{ color: '#475569', marginBottom: '4px' }}>
+                      {phase.focus}
+                    </div>
+                    {phase.milestones && (
+                      <ul style={{
+                        margin: 0,
+                        paddingLeft: '18px',
+                        color: '#64748b'
+                      }}>
+                        {phase.milestones.map((milestone, i) => (
+                          <li key={i}>{milestone}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{
+            fontSize: '10px',
+            color: '#64748b',
+            marginTop: '8px'
+          }}>
+            Generated {new Date(aiPlan.generatedAt).toLocaleString()}
+          </div>
+        </div>
+      )}
 
       {/* Instructions */}
       <div style={{

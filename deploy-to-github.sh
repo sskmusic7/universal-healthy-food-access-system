@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Universal Healthy Food Access System - GitHub Deployment Script
-# NASA Space Apps Challenge 2024
+# NASA Space Apps Challenge 2025
 
 echo "🚀 Deploying Universal Healthy Food Access System to GitHub"
 echo "=========================================================="
@@ -47,7 +47,7 @@ if git diff --staged --quiet; then
     echo "ℹ️  No changes to commit"
 else
     echo "💾 Committing changes..."
-    git commit -m "Deploy Universal Healthy Food Access System - NASA Space Apps 2024"
+    git commit -m "Deploy Universal Healthy Food Access System - NASA Space Apps 2025"
 fi
 
 # Add remote if it doesn't exist

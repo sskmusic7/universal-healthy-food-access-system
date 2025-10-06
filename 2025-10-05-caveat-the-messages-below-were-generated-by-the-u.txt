@@ -1,0 +1,17 @@
+
+ ▐▛███▜▌   Claude Code v2.0.8
+▝▜█████▛▘  Sonnet 4.5 · Claude Team
+  ▘▘ ▝▝    /home/buddha/universal-healthy-food-access-system
+═══════════════════════════════════════════════════════════════ Conversation compacted · ctrl+o for history ═══════════════════════════════════════════════════════════════
+
+> /compact 
+  ⎿  Compacted (ctrl+o to see full summary)
+  ⎿  Read HEATMAP_FEATURE.md (269 lines)
+  ⎿  Read src/components/HeatMapLayer.js (238 lines)
+  ⎿  Read src/components/LayerControl.js (390 lines)
+  ⎿  Read ../../../var/log/mail.log (18 lines)
+  ⎿  Referenced file src/components/Map.js
+
+
+
+

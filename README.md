@@ -1,6 +1,6 @@
 # Universal Healthy Food Access System
 
-A comprehensive web application for analyzing food access patterns worldwide, built for the NASA Space Apps Challenge 2024.
+A comprehensive web application for analyzing food access patterns worldwide, built for the NASA Space Apps Challenge 2025.
 
 ## Features
 
@@ -151,4 +151,4 @@ If all checkboxes work, you're ready for Phase 2 (AI solution generation)!
 
 ## License
 
-Built for NASA Space Apps Challenge 2024
+Built for NASA Space Apps Challenge 2025

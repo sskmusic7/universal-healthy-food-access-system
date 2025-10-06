@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Universal Healthy Food Access System - Setup Script
-# NASA Space Apps Challenge 2024
+# NASA Space Apps Challenge 2025
 
 echo "🚀 Setting up Universal Healthy Food Access System..."
 echo "=================================================="

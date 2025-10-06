@@ -14,7 +14,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-function CitySelector({ onCitySelected }) {
+function CitySelector(props = {}) {
+  const { onCitySelected = () => {} } = props;
   const [mode, setMode] = useState('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -57,14 +58,15 @@ function CitySelector({ onCitySelected }) {
     };
   }, [mode, onCitySelected]);
 
-  async function handleSearch() {
-    if (!searchQuery.trim()) return;
-    
+  async function handleSearch(query = searchQuery) {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
     setSearching(true);
     setError(null);
 
     try {
-      const cityData = await geocodeCity(searchQuery);
+      const cityData = await geocodeCity(trimmed);
       onCitySelected(cityData);
       setSearching(false);
     } catch (error) {
@@ -266,6 +268,7 @@ function CitySelector({ onCitySelected }) {
               onClick={() => {
                 setSearchQuery(city);
                 setMode('search');
+                handleSearch(city);
               }}
               style={{
                 padding: '4px 8px',

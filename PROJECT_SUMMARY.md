@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-**Built for:** NASA Space Apps Challenge 2024  
+**Built for:** NASA Space Apps Challenge 2025  
 **Theme:** "Boots on Ground" - Improving life on Earth  
 **Focus:** Universal Healthy Food Access Analysis  
 
