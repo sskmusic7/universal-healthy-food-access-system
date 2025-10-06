@@ -180,6 +180,8 @@ function App() {
             cityData={selectedCity}
             foodOutlets={cityData?.data?.foodOutlets}
             loading={loading}
+            algorithmAnalysis={cityData?.algorithmAnalysis}
+            overlapAnalysis={cityData?.overlapAnalysis}
           />
         </div>
       </div>
